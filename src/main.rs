@@ -4,6 +4,7 @@ use env_logger::Env;
 use log::info;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::fs;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,31 +43,27 @@ async fn get_user(id: web::Path<u32>) -> impl Responder {
 
 #[get("/users")]
 async fn get_users() -> impl Responder {
-    if let Ok(conn) = establish_connection() {
-        let mut stmt = conn
-            .prepare("SELECT id, username, email FROM users")
-            .expect("Failed to prepare query");
+    let conn = establish_connection().unwrap(); // novamente, o unwrap é simplificado para este exemplo
 
-        let users: rusqlite::Result<Vec<User>> = stmt
-            .query_map([], |row| {
-                Ok(User {
-                    id: Some(row.get(0)?),
-                    username: row.get(1)?,
-                    email: row.get(2)?,
-                })
+    let query = "SELECT id, username, email FROM users";
+    let mut stmt = conn.prepare(query).unwrap(); // Desprezando erros para simplificar
+
+    let mut users = Vec::new();
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(User {
+                id: row.get(0)?,
+                username: row.get(1)?,
+                email: row.get(2)?,
             })
-            .map(|result| {
-                result
-                    .collect::<Result<Vec<User>, rusqlite::Error>>()
-                    .unwrap_or_else(|_| vec![])
-            });
+        })
+        .unwrap(); // Desprezando erros para simplificar
 
-        if let Ok(users) = users {
-            return HttpResponse::Ok().json(users);
-        }
+    for user in rows {
+        users.push(user.unwrap());
     }
 
-    HttpResponse::InternalServerError().finish()
+    HttpResponse::Ok().json(users)
 }
 
 #[post("/users")]
