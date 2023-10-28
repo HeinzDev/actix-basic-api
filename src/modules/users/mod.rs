@@ -5,7 +5,7 @@ use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 
-pub fn configure_routes(cfg: &mut web::ServiceConfig) {
+pub fn configure_user_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(get_user)
         .service(get_users)
         .service(create_user)

@@ -44,7 +44,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .wrap(Logger::default())
-            .configure(modules::users::configure_routes)
+            .configure(modules::users::configure_user_routes)
     })
     .bind("127.0.0.1:8080")?
     .run()
