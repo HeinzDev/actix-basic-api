@@ -1,4 +1,7 @@
+use actix_web::middleware::Logger;
 use actix_web::{delete, get, post, put, web, App, HttpResponse, HttpServer, Responder};
+use env_logger::Env;
+use log::info;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 
@@ -82,14 +85,24 @@ async fn delete_user(id: web::Path<u32>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
+    let server = HttpServer::new(|| {
         App::new()
+            .wrap(Logger::default()) // Adicione um logger
             .service(get_user)
             .service(create_user)
             .service(update_user)
             .service(delete_user)
-    })
-    .bind("127.0.0.1:8080")?
-    .run()
-    .await
+    });
+
+    let address = "127.0.0.1:8080";
+
+    let server = server.bind(address)?;
+
+    info!("API started on 8080 port");
+    //println!("A API started on: {}", address); //use this to more simple log
+    server.run().await?;
+
+    Ok(())
 }
