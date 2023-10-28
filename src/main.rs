@@ -4,6 +4,7 @@ use env_logger::Env;
 use log::info;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use std::fs;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct User {
@@ -12,22 +13,56 @@ struct User {
     email: String,
 }
 
+fn establish_connection() -> rusqlite::Result<Connection> {
+    Connection::open("user_database.db")
+}
+
 #[get("/users/{id}")]
 async fn get_user(id: web::Path<u32>) -> impl Responder {
     let id = id.into_inner();
 
-    if let Ok(conn) = Connection::open("user_database.db") {
-        if let Ok(mut stmt) = conn.prepare("SELECT username, email FROM users WHERE id = ?1") {
-            if let Ok(user) = stmt.query_row(params![id], |row| {
-                let user = User {
-                    id: Some(id),
-                    username: row.get(0).unwrap_or_default(),
-                    email: row.get(1).unwrap_or_default(),
-                };
-                Ok(user)
-            }) {
-                return HttpResponse::Ok().json(user);
-            }
+    if let Ok(conn) = establish_connection() {
+        if let Ok(user) = conn.query_row(
+            "SELECT id, username, email FROM users WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(User {
+                    id: Some(row.get(0)?),
+                    username: row.get(1)?,
+                    email: row.get(2)?,
+                })
+            },
+        ) {
+            return HttpResponse::Ok().json(user);
+        }
+    }
+
+    HttpResponse::InternalServerError().finish()
+}
+
+#[get("/users")]
+async fn get_users() -> impl Responder {
+    if let Ok(conn) = establish_connection() {
+        let mut stmt = conn
+            .prepare("SELECT id, username, email FROM users")
+            .expect("Failed to prepare query");
+
+        let users: rusqlite::Result<Vec<User>> = stmt
+            .query_map([], |row| {
+                Ok(User {
+                    id: Some(row.get(0)?),
+                    username: row.get(1)?,
+                    email: row.get(2)?,
+                })
+            })
+            .map(|result| {
+                result
+                    .collect::<Result<Vec<User>, rusqlite::Error>>()
+                    .unwrap_or_else(|_| vec![])
+            });
+
+        if let Ok(users) = users {
+            return HttpResponse::Ok().json(users);
         }
     }
 
@@ -36,10 +71,10 @@ async fn get_user(id: web::Path<u32>) -> impl Responder {
 
 #[post("/users")]
 async fn create_user(user: web::Json<User>) -> impl Responder {
-    if let Ok(conn) = Connection::open("user_database.db") {
+    if let Ok(conn) = establish_connection() {
         if let Ok(_) = conn.execute(
-            "INSERT INTO users (username, email) VALUES (?1, ?2)",
-            params![user.username.clone(), user.email.clone()],
+            "INSERT INTO users (username, email) VALUES (?, ?)",
+            params![user.username, user.email],
         ) {
             let id = conn.last_insert_rowid() as u32;
             let created_user = User {
@@ -58,10 +93,10 @@ async fn create_user(user: web::Json<User>) -> impl Responder {
 async fn update_user(id: web::Path<u32>, user: web::Json<User>) -> impl Responder {
     let id = id.into_inner();
 
-    if let Ok(conn) = Connection::open("user_database.db") {
+    if let Ok(conn) = establish_connection() {
         if let Ok(_) = conn.execute(
-            "UPDATE users SET username = ?1, email = ?2 WHERE id = ?3",
-            params![user.username.clone(), user.email.clone(), id],
+            "UPDATE users SET username = ?, email = ? WHERE id = ?",
+            params![user.username, user.email, id],
         ) {
             return HttpResponse::Ok().json(user.0);
         }
@@ -74,8 +109,8 @@ async fn update_user(id: web::Path<u32>, user: web::Json<User>) -> impl Responde
 async fn delete_user(id: web::Path<u32>) -> impl Responder {
     let id = id.into_inner();
 
-    if let Ok(conn) = Connection::open("user_database.db") {
-        if let Ok(_) = conn.execute("DELETE FROM users WHERE id = ?1", params![id]) {
+    if let Ok(conn) = establish_connection() {
+        if let Ok(_) = conn.execute("DELETE FROM users WHERE id = ?", params![id]) {
             return HttpResponse::NoContent().finish();
         }
     }
@@ -85,24 +120,29 @@ async fn delete_user(id: web::Path<u32>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info,actix_web=info"))
+        .format_timestamp_millis()
+        .init();
 
-    let server = HttpServer::new(|| {
+    if !fs::metadata("user_database.db").is_ok() {
+        let conn = Connection::open("user_database.db").expect("Erro ao criar banco de dados.");
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, email TEXT)",
+            [],
+        )
+        .expect("Erro ao criar tabela users.");
+    }
+
+    HttpServer::new(|| {
         App::new()
-            .wrap(Logger::default()) // Adicione um logger
+            .wrap(Logger::default())
             .service(get_user)
+            .service(get_users)
             .service(create_user)
             .service(update_user)
             .service(delete_user)
-    });
-
-    let address = "127.0.0.1:8080";
-
-    let server = server.bind(address)?;
-
-    info!("API started on 8080 port");
-    //println!("A API started on: {}", address); //use this to more simple log
-    server.run().await?;
-
-    Ok(())
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
 }
