@@ -18,6 +18,25 @@ fn establish_connection() -> rusqlite::Result<Connection> {
     Connection::open("user_database.db")
 }
 
+#[get("/")]
+async fn index() -> HttpResponse {
+    let html = r#"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Actix API</title>
+        </head>
+        <body>
+            <h1>Welcome to Actix API!</h1>
+        </body>
+        </html>
+    "#;
+
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(html)
+}
+
 #[get("/users/{id}")]
 async fn get_user(id: web::Path<u32>) -> impl Responder {
     let id = id.into_inner();
@@ -133,6 +152,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .wrap(Logger::default())
+            .service(index)
             .service(get_user)
             .service(get_users)
             .service(create_user)
