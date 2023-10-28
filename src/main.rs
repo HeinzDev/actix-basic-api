@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpResponse, HttpServer};
 use env_logger::Env;
@@ -44,6 +45,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .wrap(Logger::default())
+            .wrap(Cors::permissive())
             .configure(modules::users::configure_user_routes)
     })
     .bind("127.0.0.1:8080")?
