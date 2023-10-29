@@ -45,10 +45,10 @@ async fn get_user(id: web::Path<u32>) -> impl Responder {
 
 #[get("/users")]
 async fn get_users() -> impl Responder {
-    let conn = establish_connection().unwrap(); // novamente, o unwrap é simplificado para este exemplo
+    let conn = establish_connection().unwrap();
 
     let query = "SELECT id, username, email FROM users";
-    let mut stmt = conn.prepare(query).unwrap(); // Desprezando erros para simplificar
+    let mut stmt = conn.prepare(query).unwrap();
 
     let mut users = Vec::new();
     let rows = stmt
@@ -59,7 +59,7 @@ async fn get_users() -> impl Responder {
                 email: row.get(2)?,
             })
         })
-        .unwrap(); // Desprezando erros para simplificar
+        .unwrap();
 
     for user in rows {
         users.push(user.unwrap());

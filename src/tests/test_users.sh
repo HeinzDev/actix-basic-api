@@ -9,6 +9,14 @@ check_response() {
   fi
 }
 
+# Exemplo de uso
+echo "Iniciando Teste 1"
+measure_time curl -s -o /dev/null -w "%{time_total}\n" URL_1
+echo "Iniciando Teste 2"
+measure_time curl -s -o /dev/null -w "%{time_total}\n" URL_2
+
+start_time=$(date +%s%3N)
+
 echo "_______________________________________________________________________________________"
 
 # Teste POST
@@ -48,3 +56,8 @@ response=$(curl -X DELETE http://127.0.0.1:8080/users/1)
 check_response "$response" '' "[DELETE]"
 
 echo "_______________________________________________________________________________________"
+
+end_time=$(date +%s%3N)
+elapsed_time=$((end_time - start_time))
+
+echo "[$elapsed_time ms]"
