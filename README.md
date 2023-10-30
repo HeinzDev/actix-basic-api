@@ -27,5 +27,7 @@ This is a project aimed at creating a simple CRUD for users in Rust using the Ac
   <a href="https://github.com/HeinzDev/">
     <img src="https://i.imgur.com/RtsYtRt.png" width="100"/>
   </a>
-  <h3>HeinzDev</h3>
+  <a href="https://github.com/HeinzDev/">
+    <h3>HeinzDev</h3>  
+  </a>
 </div>
