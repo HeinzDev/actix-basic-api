@@ -48,7 +48,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(Cors::permissive())
             .configure(modules::users::configure_user_routes)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(format!(
+        "127.0.0.1:{}",
+        std::env::var("PORT").unwrap_or_else(|_| "8080".to_string())
+    ))?
     .run()
     .await
 }
