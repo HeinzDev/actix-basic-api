@@ -49,7 +49,7 @@ async fn main() -> std::io::Result<()> {
             .configure(modules::users::configure_user_routes)
     })
     .bind(format!(
-        "127.0.0.1:{}",
+        "0.0.0.0:{}", //change the address to 127.0.0.1 if got any errors
         std::env::var("PORT").unwrap_or_else(|_| "8080".to_string())
     ))?
     .run()
