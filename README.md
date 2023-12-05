@@ -10,6 +10,10 @@ This is a project aimed at creating a simple CRUD for users in Rust using the Ac
 
 - `modules/`: This directory contains route/operations folders for the CRUD.
 
+## Project Deploy
+
+You can acces the API deploy link [Here](https://actix-basic-api.onrender.com/).
+
 ## How to Use
 
 1. Make sure you have Rust installed on your machine.
